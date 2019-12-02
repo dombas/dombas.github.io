@@ -1,14 +1,17 @@
 const CANVAS_ID = 'mainCanvas';
+const MIN_SNAKE_LENGTH = 3;
+const FEED_GROW = 5;
 
 let boardSizeString = window.location.search.substr(1);
-console.log("substring "+boardSizeString);
+console.log("substring " + boardSizeString);
 let boardSizeConverted = parseInt(boardSizeString);
-console.log("board size converted "+boardSizeConverted);
+console.log("board size converted " + boardSizeConverted);
 let boardSizeInCells;
-if(Number.isInteger(boardSizeConverted)){
+if (Number.isInteger(boardSizeConverted)) {
     boardSizeInCells = boardSizeConverted;
 } else {
     boardSizeInCells = 20;
+    console.log("failed to read board size, going with default " + boardSizeInCells);
 }
 let gameLogic = new GameLogic(boardSizeInCells);
 let gameRender = new GameRenderer(gameLogic);
@@ -32,7 +35,7 @@ function TouchHandler(gameLogic) {
     this.lastTouchX = 0;
     this.lastTouchY = 0;
 
-    let movingAverageWindow = 5;
+    let movingAverageWindow = 3;
     this.diffsX = Array(movingAverageWindow).fill(0);
     this.diffsY = Array(movingAverageWindow).fill(0);
 
@@ -115,6 +118,16 @@ function GameLogic(boardSizeInCells) {
             this.snakeActor.feed();
             let randomPosition = getRandomPosition(this.boardSizeInCells);
             this.meatActor.setPosition(randomPosition);
+        }
+        //if collided with tail, cut off from collision point
+        let segments = this.snakeActor.segments;
+        for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
+            let segment = segments[segmentIndex];
+            if(isSamePosition(this.snakeActor, segment)){
+                this.snakeActor.snakeLength = Math.max(MIN_SNAKE_LENGTH, segmentIndex);
+                this.snakeActor.segments = segments.slice(0,segmentIndex);
+                break;
+            }
         }
         this.snakeActor.move();
         //wrap walls
@@ -280,11 +293,11 @@ function SnakeActor(startingX, startingY) {
     GenericActor.call(this, startingX, startingY);
     this.changeX = 0;
     this.changeY = 0;
-    this.snakeLength = 3;
+    this.snakeLength = MIN_SNAKE_LENGTH;
     this.segments = Array();
 
     this.feed = function () {
-        this.snakeLength += 1;
+        this.snakeLength += FEED_GROW;
     };
 
     this.move = function () {
@@ -300,6 +313,9 @@ function SnakeActor(startingX, startingY) {
         this.y += this.changeY;
     };
 
+    //TODO it's still possible to to do a 180 in place
+    // instead of checking changeX/Y, check the first segment location
+    // wrap around the walls (maybe a function for wrapping Position).
     this.goRight = function () {
         if (this.changeX !== -1) {
             this.changeY = 0;
