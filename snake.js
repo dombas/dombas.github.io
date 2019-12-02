@@ -5,6 +5,9 @@ let gameRender = new GameRenderer(gameLogic);
 let touchHandler = new TouchHandler(gameLogic);
 document.addEventListener('keydown', gameLogic);
 document.addEventListener('touchmove', touchHandler);
+document.addEventListener('touchstart', function (event) {
+    touchHandler.handleTouchStart(event);
+});
 
 function gameUpdate() {
     gameLogic.update();
@@ -23,6 +26,7 @@ function TouchHandler(gameLogic) {
     this.diffsX = Array(movingAverageWindow).fill(0);
     this.diffsY = Array(movingAverageWindow).fill(0);
 
+
     this.minimumDifference = 5;
     this.handleEvent = function (event) {
         if (event.touches && event.touches.length > 0) {
@@ -31,7 +35,7 @@ function TouchHandler(gameLogic) {
             let touchY = touch.clientY;
             let differenceX = this.lastTouchX - touchX;
             let differenceY = this.lastTouchY - touchY;
-            if(Math.abs(differenceX) < this.minimumDifference && Math.abs(differenceY) < this.minimumDifference){
+            if (Math.abs(differenceX) < this.minimumDifference && Math.abs(differenceY) < this.minimumDifference) {
                 return;
             }
             this.lastTouchX = touchX;
@@ -46,7 +50,7 @@ function TouchHandler(gameLogic) {
             let sumDiffsY = this.diffsY.reduce(function (a, b) {
                 return a + b;
             });
-            console.log(""+sumDiffsX+" , "+sumDiffsY);
+            console.log("" + sumDiffsX + " , " + sumDiffsY);
             let snake = this.gameLogic.snakeActor;
             if (Math.abs(sumDiffsX) > Math.abs(sumDiffsY)) {
                 if (differenceX > 0) {
@@ -62,6 +66,15 @@ function TouchHandler(gameLogic) {
                 }
             }
         }
+    };
+
+    this.handleTouchStart = function (event) {
+        console.log("Touch start!");
+        this.diffsX = this.diffsX.fill(0);
+        this.diffsY = this.diffsY.fill(0);
+        let touch = event.touches[0];
+        this.lastTouchX = touch.clientX;
+        this.lastTouchY = touch.clientY;
     }
 }
 
