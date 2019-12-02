@@ -1,7 +1,9 @@
 const CANVAS_ID = 'mainCanvas';
 
 let boardSizeString = window.location.search.substr(1);
+console.log("substring "+boardSizeString);
 let boardSizeConverted = parseInt(boardSizeString);
+console.log("board size converted "+boardSizeConverted);
 let boardSizeInCells;
 if(Number.isInteger(boardSizeConverted)){
     boardSizeInCells = boardSizeConverted;
