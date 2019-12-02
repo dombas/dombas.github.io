@@ -123,9 +123,9 @@ function GameLogic(boardSizeInCells) {
         let segments = this.snakeActor.segments;
         for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
             let segment = segments[segmentIndex];
-            if(isSamePosition(this.snakeActor, segment)){
-                this.snakeActor.snakeLength = Math.max(MIN_SNAKE_LENGTH, segmentIndex);
-                this.snakeActor.segments = segments.slice(0,segmentIndex);
+            if (isSamePosition(this.snakeActor, segment)) {
+                this.snakeActor.snakeLength = Math.max(MIN_SNAKE_LENGTH, segmentIndex-1);
+                this.snakeActor.segments = segments.slice(0, this.snakeActor.snakeLength);
                 break;
             }
         }
