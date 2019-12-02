@@ -84,7 +84,7 @@ function GameLogic(boardSizeInCells) {
                 this.snakeActor.goRight();
                 break;
         }
-    }
+    };
 
     this.update = function () {
         //if on top of meat, grow snake, move meat
@@ -124,6 +124,9 @@ function GameLogic(boardSizeInCells) {
 function GameRenderer(gameLogic) {
     this.canvasElement = document.getElementById(CANVAS_ID);
     this.renderContext = this.canvasElement.getContext('2d');
+    let size = Math.min(window.innerWidth, window.innerHeight);
+    this.renderContext.canvas.width = size;
+    this.renderContext.canvas.height = size;
     this.canvasWidth = this.canvasElement.getAttribute('width');
     this.canvasHeight = this.canvasElement.getAttribute('height');
 
