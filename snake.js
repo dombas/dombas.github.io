@@ -1,6 +1,14 @@
 const CANVAS_ID = 'mainCanvas';
 
-let gameLogic = new GameLogic(30);
+let boardSizeString = window.location.search.substr(1);
+let boardSizeConverted = parseInt(boardSizeString);
+let boardSizeInCells;
+if(Number.isInteger(boardSizeConverted)){
+    boardSizeInCells = boardSizeConverted;
+} else {
+    boardSizeInCells = 20;
+}
+let gameLogic = new GameLogic(boardSizeInCells);
 let gameRender = new GameRenderer(gameLogic);
 let touchHandler = new TouchHandler(gameLogic);
 document.addEventListener('keydown', gameLogic);
@@ -50,7 +58,7 @@ function TouchHandler(gameLogic) {
             let sumDiffsY = this.diffsY.reduce(function (a, b) {
                 return a + b;
             });
-            console.log("" + sumDiffsX + " , " + sumDiffsY);
+            // console.log("" + sumDiffsX + " , " + sumDiffsY);
             let snake = this.gameLogic.snakeActor;
             if (Math.abs(sumDiffsX) > Math.abs(sumDiffsY)) {
                 if (differenceX > 0) {
