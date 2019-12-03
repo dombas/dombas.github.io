@@ -130,6 +130,8 @@ function GameLogic() {
     this.boardSizeInCells = gameSettings.boardSize;
     this.keyBuffer = null;
 
+    this.score = 0;
+
     this.clearKeyBuffer = function () {
         this.keyBuffer = null;
     };
@@ -179,6 +181,7 @@ function GameLogic() {
         //if on top of meat, grow snake, move meat
         if (isSamePosition(this.snakeActor, this.meatActor)) {
             this.snakeActor.feed();
+            this.updateScore();
             let randomPosition = getRandomPosition(this.boardSizeInCells);
             this.meatActor.setPosition(randomPosition);
         }
@@ -189,6 +192,7 @@ function GameLogic() {
             if (isSamePosition(this.snakeActor, segment)) {
                 this.snakeActor.snakeLength = Math.max(gameSettings.minSnakeLength, segmentIndex - 1);
                 this.snakeActor.segments = segments.slice(0, this.snakeActor.snakeLength);
+                this.updateScore();
                 break;
             }
         }
@@ -203,6 +207,10 @@ function GameLogic() {
         } else if (this.snakeActor.y >= this.boardSizeInCells) {
             this.snakeActor.y = 0;
         }
+    };
+
+    this.updateScore = function(){
+        this.score = this.snakeActor.snakeLength - gameSettings.minSnakeLength;
     };
 
     function isSamePosition(actor1, actor2) {
@@ -233,6 +241,11 @@ function GameRenderer() {
     this.borderThickness = 5;
     this.borderColor = '#060';
 
+    this.backgroundColor = '#000';
+
+    this.scoreColor = 'rgba(255,255,255,0.5)';
+    this.scoreFont = this.canvasWidth/4+'px Sans-Serif';
+
     this.meatColor = '#900';
 
     this.snakeColor = '#0A0';
@@ -245,6 +258,8 @@ function GameRenderer() {
 
         clearFrame(this);
 
+        drawBackground(this,this.backgroundColor);
+
         drawGameBorder(this);
 
         drawSnake(this, gameLogic.snakeActor);
@@ -252,11 +267,21 @@ function GameRenderer() {
         let meat = this.gameLogic.meatActor;
         drawMeat(this, meat.y, meat.x);
 
+        drawScore(this, this.scoreColor, this.scoreFont);
+
         function clearFrame(gameRenderer) {
             let ctx = gameRenderer.renderContext;
             let width = gameRenderer.canvasWidth;
             let height = gameRenderer.canvasHeight;
             ctx.clearRect(0, 0, width, height);
+        }
+
+        function drawBackground(gameRenderer, color){
+            let ctx = gameRenderer.renderContext;
+            ctx.fillStyle = color;
+            let width = gameRenderer.canvasWidth;
+            let height = gameRenderer.canvasHeight;
+            ctx.fillRect(0,0,width, height);
         }
 
         function drawGameBorder(gameRenderer) {
@@ -296,6 +321,17 @@ function GameRenderer() {
             let cell = gameRenderer.cellTable[row][col];
             ctx.fillStyle = color;
             ctx.fillRect(cell.x, cell.y, cellSize, cellSize);
+        }
+
+        function drawScore(gameRenderer, color, font){
+            let ctx = gameRenderer.renderContext;
+            ctx.fillStyle = color;
+            ctx.font = font;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let x = gameRenderer.canvasWidth/2;
+            let y = gameRenderer.canvasHeight/2;
+            ctx.fillText(gameLogic.score, x, y, gameRenderer.canvasWidth/2);
         }
     };
 

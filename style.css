@@ -3,11 +3,13 @@ html, body {
     height: auto;
     margin: 0;
     overflow: hidden;
+    position: fixed;
 }
 
 body{
     background-color: black;
 }
+
 canvas {
     border: 1px solid black;
 }
