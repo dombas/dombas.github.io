@@ -26,7 +26,7 @@ function gameUpdate() {
 
 gameUpdate();
 let frameTime = Math.floor(1000/gameSettings.gameSpeed);
-console.log("frametime " + frameTime);
+console.log("frame time " + frameTime);
 window.setInterval(gameUpdate, frameTime);
 
 function GameSettings() {
@@ -67,7 +67,6 @@ function GameSettings() {
 }
 
 function TouchHandler() {
-    this.gameLogic = gameLogic;
     this.lastTouchX = 0;
     this.lastTouchY = 0;
 
@@ -100,18 +99,17 @@ function TouchHandler() {
                 return a + b;
             });
             // console.log("" + sumDiffsX + " , " + sumDiffsY);
-            let snake = this.gameLogic.snakeActor;
             if (Math.abs(sumDiffsX) > Math.abs(sumDiffsY)) {
                 if (differenceX > 0) {
-                    snake.goLeft();
+                    gameLogic.handleControl("ArrowLeft");
                 } else {
-                    snake.goRight();
+                    gameLogic.handleControl("ArrowRight");
                 }
             } else {
                 if (differenceY > 0) {
-                    snake.goUp();
+                    gameLogic.handleControl("ArrowUp");
                 } else {
-                    snake.goDown();
+                    gameLogic.handleControl("ArrowDown");
                 }
             }
         }
@@ -137,33 +135,37 @@ function GameLogic() {
     };
 
     this.handleEvent = function (event) {
-        switch (event.key) {
+        this.handleControl(event.key);
+    };
+
+    this.handleControl = function (eventKey){
+        switch (eventKey) {
             case "ArrowDown":
                 if (this.snakeActor.goDown()) {
                     this.clearKeyBuffer();
                 } else {
-                    this.keyBuffer = event;
+                    this.keyBuffer = eventKey;
                 }
                 break;
             case "ArrowUp":
                 if (this.snakeActor.goUp()) {
                     this.clearKeyBuffer();
                 } else {
-                    this.keyBuffer = event;
+                    this.keyBuffer = eventKey;
                 }
                 break;
             case "ArrowLeft":
                 if (this.snakeActor.goLeft()) {
                     this.clearKeyBuffer();
                 } else {
-                    this.keyBuffer = event;
+                    this.keyBuffer = eventKey;
                 }
                 break;
             case "ArrowRight":
                 if (this.snakeActor.goRight()) {
                     this.clearKeyBuffer();
                 } else {
-                    this.keyBuffer = event;
+                    this.keyBuffer = eventKey;
                 }
                 break;
         }
@@ -171,7 +173,7 @@ function GameLogic() {
 
     this.update = function () {
         if(this.keyBuffer){
-            this.handleEvent(this.keyBuffer);
+            this.handleControl(this.keyBuffer);
         }
         this.snakeActor.move();
         //if on top of meat, grow snake, move meat
