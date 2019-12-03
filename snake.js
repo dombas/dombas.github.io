@@ -2,22 +2,13 @@ const CANVAS_ID = 'mainCanvas';
 const DEFAULT_MIN_SNAKE_LENGTH = 3;
 const DEFAULT_FEED_GROW = 1;
 const DEFAULT_BOARD_SIZE = 20;
+const DEFAULT_SPEED = 10;
 
 const MIN_SNAKE_LENGTH_GET_NAME = 'msl';
 const FEED_GROW_GET_NAME = 'feed';
 const BOARD_SIZE_GET_NAME = 'board';
+const SPEED_GET_NAME = 'speed';
 
-let boardSizeString = window.location.search.substr(1);
-console.log("substring " + boardSizeString);
-let boardSizeConverted = parseInt(boardSizeString);
-console.log("board size converted " + boardSizeConverted);
-let boardSizeInCells;
-if (Number.isInteger(boardSizeConverted)) {
-    boardSizeInCells = boardSizeConverted;
-} else {
-    boardSizeInCells = 20;
-    console.log("failed to read board size, going with default " + boardSizeInCells);
-}
 let gameSettings = new GameSettings();
 let gameLogic = new GameLogic();
 let gameRender = new GameRenderer();
@@ -30,36 +21,44 @@ document.addEventListener('touchstart', function (event) {
 
 function gameUpdate() {
     gameLogic.update();
-    gameRender.drawFrame(); //TODO change to interval (draw frames 24FPS)
+    gameRender.drawFrame();
 }
 
 gameUpdate();
-window.setInterval(gameUpdate, 100);
+let frameTime = Math.floor(1000/gameSettings.gameSpeed);
+console.log("frametime " + frameTime);
+window.setInterval(gameUpdate, frameTime);
 
-function GameSettings(){
+function GameSettings() {
     let urlParams = new URLSearchParams(window.location.search);
     this.minSnakeLength = DEFAULT_MIN_SNAKE_LENGTH;
     let minSnakeLength = getIntGetParameterFromUrlParams(MIN_SNAKE_LENGTH_GET_NAME, urlParams);
-    if(minSnakeLength){
+    if (minSnakeLength) {
         this.minSnakeLength = minSnakeLength;
     }
 
     this.feedGrow = DEFAULT_FEED_GROW;
     let feedGrow = getIntGetParameterFromUrlParams(FEED_GROW_GET_NAME, urlParams);
-    if(feedGrow){
+    if (feedGrow) {
         this.feedGrow = feedGrow;
     }
 
     this.boardSize = DEFAULT_BOARD_SIZE;
     let boardSize = getIntGetParameterFromUrlParams(BOARD_SIZE_GET_NAME, urlParams);
-    if(boardSize){
+    if (boardSize) {
         this.boardSize = boardSize;
     }
 
-    function getIntGetParameterFromUrlParams(parameterName, urlParams){
-        if(urlParams.has(parameterName)){
+    this.gameSpeed = DEFAULT_SPEED;
+    let gameSpeed = getIntGetParameterFromUrlParams(SPEED_GET_NAME, urlParams);
+    if (gameSpeed) {
+        this.gameSpeed = gameSpeed;
+    }
+
+    function getIntGetParameterFromUrlParams(parameterName, urlParams) {
+        if (urlParams.has(parameterName)) {
             let parameterValue = parseInt(urlParams.get(parameterName));
-            if(Number.isInteger(parameterValue)){
+            if (Number.isInteger(parameterValue)) {
                 return parameterValue;
             }
         }
@@ -119,7 +118,6 @@ function TouchHandler() {
     };
 
     this.handleTouchStart = function (event) {
-        console.log("Touch start!");
         this.diffsX = this.diffsX.fill(0);
         this.diffsY = this.diffsY.fill(0);
         let touch = event.touches[0];
@@ -132,24 +130,49 @@ function GameLogic() {
     this.snakeActor = new SnakeActor(3, 3);
     this.meatActor = new MeatActor(1, 1);
     this.boardSizeInCells = gameSettings.boardSize;
+    this.keyBuffer = null;
+
+    this.clearKeyBuffer = function () {
+        this.keyBuffer = null;
+    };
+
     this.handleEvent = function (event) {
         switch (event.key) {
             case "ArrowDown":
-                this.snakeActor.goDown();
+                if (this.snakeActor.goDown()) {
+                    this.clearKeyBuffer();
+                } else {
+                    this.keyBuffer = event;
+                }
                 break;
             case "ArrowUp":
-                this.snakeActor.goUp();
+                if (this.snakeActor.goUp()) {
+                    this.clearKeyBuffer();
+                } else {
+                    this.keyBuffer = event;
+                }
                 break;
             case "ArrowLeft":
-                this.snakeActor.goLeft();
+                if (this.snakeActor.goLeft()) {
+                    this.clearKeyBuffer();
+                } else {
+                    this.keyBuffer = event;
+                }
                 break;
             case "ArrowRight":
-                this.snakeActor.goRight();
+                if (this.snakeActor.goRight()) {
+                    this.clearKeyBuffer();
+                } else {
+                    this.keyBuffer = event;
+                }
                 break;
         }
     };
 
     this.update = function () {
+        if(this.keyBuffer){
+            this.handleEvent(this.keyBuffer);
+        }
         this.snakeActor.move();
         //if on top of meat, grow snake, move meat
         if (isSamePosition(this.snakeActor, this.meatActor)) {
@@ -162,7 +185,7 @@ function GameLogic() {
         for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
             let segment = segments[segmentIndex];
             if (isSamePosition(this.snakeActor, segment)) {
-                this.snakeActor.snakeLength = Math.max(gameSettings.minSnakeLength, segmentIndex-1);
+                this.snakeActor.snakeLength = Math.max(gameSettings.minSnakeLength, segmentIndex - 1);
                 this.snakeActor.segments = segments.slice(0, this.snakeActor.snakeLength);
                 break;
             }
@@ -219,7 +242,7 @@ function GameRenderer() {
     this.drawFrame = function () {
 
         clearFrame(this);
-        
+
         drawGameBorder(this);
 
         drawSnake(this, gameLogic.snakeActor);
@@ -284,7 +307,6 @@ function GameRenderer() {
         let canvasHeight = gameRenderer.canvasHeight;
         let borderThickness = gameRenderer.borderThickness;
         let usefulSize = canvasWidth - (2 * borderThickness);
-        console.log("useful size " + usefulSize);
         let cellSize = Math.floor(usefulSize / widthInCells);
         console.log("cell size " + cellSize);
         if (cellSize < 1) {
@@ -351,34 +373,49 @@ function SnakeActor(startingX, startingY) {
         this.y += this.changeY;
     };
 
-    //TODO it's still possible to to do a 180 in place
-    // instead of checking changeX/Y, check the first segment location
-    // wrap around the walls (maybe a function for wrapping Position).
     this.goRight = function () {
-        if (this.changeX !== -1) {
+        if (this.getLastChangeX() !== -1) {
             this.changeY = 0;
             this.changeX = 1;
+            return true;
         }
+        return false;
     };
 
     this.goLeft = function () {
-        if (this.changeX !== 1) {
+        if (this.getLastChangeX() !== 1) {
             this.changeY = 0;
             this.changeX = -1;
+            return true;
         }
+        return false
     };
 
     this.goUp = function () {
-        if (this.changeY !== 1) {
+        if (this.getLastChangeY() !== 1) {
             this.changeX = 0;
             this.changeY = -1;
+            return true;
         }
+        return false;
     };
 
     this.goDown = function () {
-        if (this.changeY !== -1) {
+        if (this.getLastChangeY() !== -1) {
             this.changeX = 0;
             this.changeY = 1;
+            return true;
         }
-    }
+        return false;
+    };
+
+    this.getLastChangeX = function () {
+        let firstSegment = this.segments[0];
+        return this.x - firstSegment.x;
+    };
+
+    this.getLastChangeY = function () {
+        let firstSegment = this.segments[0];
+        return this.y - firstSegment.y;
+    };
 }
