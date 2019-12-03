@@ -1,6 +1,11 @@
 const CANVAS_ID = 'mainCanvas';
-const MIN_SNAKE_LENGTH = 3;
-const FEED_GROW = 5;
+const DEFAULT_MIN_SNAKE_LENGTH = 3;
+const DEFAULT_FEED_GROW = 1;
+const DEFAULT_BOARD_SIZE = 20;
+
+const MIN_SNAKE_LENGTH_GET_NAME = 'msl';
+const FEED_GROW_GET_NAME = 'feed';
+const BOARD_SIZE_GET_NAME = 'board';
 
 let boardSizeString = window.location.search.substr(1);
 console.log("substring " + boardSizeString);
@@ -13,9 +18,10 @@ if (Number.isInteger(boardSizeConverted)) {
     boardSizeInCells = 20;
     console.log("failed to read board size, going with default " + boardSizeInCells);
 }
-let gameLogic = new GameLogic(boardSizeInCells);
-let gameRender = new GameRenderer(gameLogic);
-let touchHandler = new TouchHandler(gameLogic);
+let gameSettings = new GameSettings();
+let gameLogic = new GameLogic();
+let gameRender = new GameRenderer();
+let touchHandler = new TouchHandler();
 document.addEventListener('keydown', gameLogic);
 document.addEventListener('touchmove', touchHandler);
 document.addEventListener('touchstart', function (event) {
@@ -30,7 +36,38 @@ function gameUpdate() {
 gameUpdate();
 window.setInterval(gameUpdate, 100);
 
-function TouchHandler(gameLogic) {
+function GameSettings(){
+    let urlParams = new URLSearchParams(window.location.search);
+    this.minSnakeLength = DEFAULT_MIN_SNAKE_LENGTH;
+    let minSnakeLength = getIntGetParameterFromUrlParams(MIN_SNAKE_LENGTH_GET_NAME, urlParams);
+    if(minSnakeLength){
+        this.minSnakeLength = minSnakeLength;
+    }
+
+    this.feedGrow = DEFAULT_FEED_GROW;
+    let feedGrow = getIntGetParameterFromUrlParams(FEED_GROW_GET_NAME, urlParams);
+    if(feedGrow){
+        this.feedGrow = feedGrow;
+    }
+
+    this.boardSize = DEFAULT_BOARD_SIZE;
+    let boardSize = getIntGetParameterFromUrlParams(BOARD_SIZE_GET_NAME, urlParams);
+    if(boardSize){
+        this.boardSize = boardSize;
+    }
+
+    function getIntGetParameterFromUrlParams(parameterName, urlParams){
+        if(urlParams.has(parameterName)){
+            let parameterValue = parseInt(urlParams.get(parameterName));
+            if(Number.isInteger(parameterValue)){
+                return parameterValue;
+            }
+        }
+        return null;
+    }
+}
+
+function TouchHandler() {
     this.gameLogic = gameLogic;
     this.lastTouchX = 0;
     this.lastTouchY = 0;
@@ -91,10 +128,10 @@ function TouchHandler(gameLogic) {
     }
 }
 
-function GameLogic(boardSizeInCells) {
+function GameLogic() {
     this.snakeActor = new SnakeActor(3, 3);
     this.meatActor = new MeatActor(1, 1);
-    this.boardSizeInCells = boardSizeInCells;
+    this.boardSizeInCells = gameSettings.boardSize;
     this.handleEvent = function (event) {
         switch (event.key) {
             case "ArrowDown":
@@ -113,6 +150,7 @@ function GameLogic(boardSizeInCells) {
     };
 
     this.update = function () {
+        this.snakeActor.move();
         //if on top of meat, grow snake, move meat
         if (isSamePosition(this.snakeActor, this.meatActor)) {
             this.snakeActor.feed();
@@ -124,12 +162,11 @@ function GameLogic(boardSizeInCells) {
         for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
             let segment = segments[segmentIndex];
             if (isSamePosition(this.snakeActor, segment)) {
-                this.snakeActor.snakeLength = Math.max(MIN_SNAKE_LENGTH, segmentIndex-1);
+                this.snakeActor.snakeLength = Math.max(gameSettings.minSnakeLength, segmentIndex-1);
                 this.snakeActor.segments = segments.slice(0, this.snakeActor.snakeLength);
                 break;
             }
         }
-        this.snakeActor.move();
         //wrap walls
         if (this.snakeActor.x < 0) {
             this.snakeActor.x = this.boardSizeInCells - 1;
@@ -157,7 +194,7 @@ function GameLogic(boardSizeInCells) {
     }
 }
 
-function GameRenderer(gameLogic) {
+function GameRenderer() {
     this.canvasElement = document.getElementById(CANVAS_ID);
     this.renderContext = this.canvasElement.getContext('2d');
     let size = Math.min(window.innerWidth, window.innerHeight);
@@ -175,18 +212,20 @@ function GameRenderer(gameLogic) {
 
     this.snakeColor = '#0A0';
 
-    let cellTableObject = makeCellTable(this, this.gameLogic.boardSizeInCells);
+    let cellTableObject = makeCellTable(this, gameSettings.boardSize);
     this.cellSize = cellTableObject.cellSize;
     this.cellTable = cellTableObject.cellTable;
 
     this.drawFrame = function () {
 
         clearFrame(this);
+        
         drawGameBorder(this);
-        let meat = this.gameLogic.meatActor;
-        drawMeat(this, meat.y, meat.x);
 
         drawSnake(this, gameLogic.snakeActor);
+
+        let meat = this.gameLogic.meatActor;
+        drawMeat(this, meat.y, meat.x);
 
         function clearFrame(gameRenderer) {
             let ctx = gameRenderer.renderContext;
@@ -293,11 +332,11 @@ function SnakeActor(startingX, startingY) {
     GenericActor.call(this, startingX, startingY);
     this.changeX = 0;
     this.changeY = 0;
-    this.snakeLength = MIN_SNAKE_LENGTH;
+    this.snakeLength = gameSettings.minSnakeLength;
     this.segments = Array();
 
     this.feed = function () {
-        this.snakeLength += FEED_GROW;
+        this.snakeLength += gameSettings.feedGrow;
     };
 
     this.move = function () {
@@ -305,7 +344,6 @@ function SnakeActor(startingX, startingY) {
             'x': this.x,
             'y': this.y
         });
-        //TODO maybe move this into GameLogic?
         if (this.segments.length > this.snakeLength - 1) {
             this.segments.pop();
         }
