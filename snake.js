@@ -279,9 +279,11 @@ function GameRenderer() {
 
     this.snakeColor = '#0A0';
 
+
     let cellTableObject = makeCellTable(this, gameSettings.boardSize);
     this.cellSize = cellTableObject.cellSize;
     this.cellTable = cellTableObject.cellTable;
+    this.snakeThickness = Math.floor(this.cellSize*0.75);
 
     this.drawFrame = function () {
 
@@ -338,10 +340,28 @@ function GameRenderer() {
             //draw head
             drawSnakeSegment(gameRenderer, snakeActor.y, snakeActor.x);
             //draw tail
+            let thickness = gameRenderer.snakeThickness;
             let snakeSegments = snakeActor.segments;
+            let previousSegment = snakeActor;
             for (let segmentIndex = 0; segmentIndex < snakeSegments.length; segmentIndex++) {
                 let segment = snakeSegments[segmentIndex];
-                drawSnakeSegment(gameRenderer, segment.y, segment.x);
+                let changeX = segment.x - previousSegment.x;
+                let changeY = segment.y - previousSegment.y;
+                if (changeX === 1) {
+                    drawSnakeSegmentThinLeft(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinRight(gameRenderer, previousSegment.y, previousSegment.x, thickness);
+                } else if (changeX === -1) {
+                    drawSnakeSegmentThinRight(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinLeft(gameRenderer, previousSegment.y, previousSegment.x, thickness);
+                } else if (changeY === 1) {
+                    drawSnakeSegmentThinUp(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinDown(gameRenderer, previousSegment.y, previousSegment.x, thickness);
+                } else if (changeY === -1) {
+                    drawSnakeSegmentThinDown(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinUp(gameRenderer, previousSegment.y, previousSegment.x, thickness);
+                }
+                previousSegment = segment;
+                // drawSnakeSegment(gameRenderer, segment.y, segment.x);
             }
         }
 
@@ -353,12 +373,64 @@ function GameRenderer() {
             drawFillCell(gameRenderer, row, col, gameRenderer.meatColor);
         }
 
+        function drawSnakeSegmentThinLeft(gameRenderer, row, col, thickness) {
+            let ctx = gameRenderer.renderContext;
+            let cellSize = gameRenderer.cellSize;
+            let cell = gameRenderer.cellTable[row][col];
+            ctx.fillStyle = gameRenderer.snakeColor;
+            let padding = (cellSize - thickness) / 2;
+            let x = cell.x;
+            let y = cell.y + padding;
+            let w = (cellSize + thickness) / 2;
+            let h = thickness;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        function drawSnakeSegmentThinUp(gameRenderer, row, col, thickness) {
+            let ctx = gameRenderer.renderContext;
+            let cellSize = gameRenderer.cellSize;
+            let cell = gameRenderer.cellTable[row][col];
+            ctx.fillStyle = gameRenderer.snakeColor;
+            let padding = (cellSize - thickness) / 2;
+            let x = cell.x + padding;
+            let y = cell.y;
+            let w = thickness;
+            let h = (cellSize + thickness) / 2;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        function drawSnakeSegmentThinRight(gameRenderer, row, col, thickness) {
+            let ctx = gameRenderer.renderContext;
+            let cellSize = gameRenderer.cellSize;
+            let cell = gameRenderer.cellTable[row][col];
+            ctx.fillStyle = gameRenderer.snakeColor;
+            let padding = (cellSize - thickness) / 2;
+            let x = cell.x + cellSize / 2 - thickness / 2;
+            let y = cell.y + cellSize / 2 - thickness / 2;
+            let w = (cellSize + thickness) / 2;
+            let h = thickness;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        function drawSnakeSegmentThinDown(gameRenderer, row, col, thickness) {
+            let ctx = gameRenderer.renderContext;
+            let cellSize = gameRenderer.cellSize;
+            let cell = gameRenderer.cellTable[row][col];
+            ctx.fillStyle = gameRenderer.snakeColor;
+            let padding = (cellSize - thickness) / 2;
+            let x = cell.x + cellSize / 2 - thickness / 2;
+            let y = cell.y + cellSize / 2 - thickness / 2;
+            let w = thickness;
+            let h = (cellSize + thickness) / 2;
+            ctx.fillRect(x, y, w, h);
+        }
+
         function drawFillCell(gameRenderer, row, col, color) {
             let ctx = gameRenderer.renderContext;
             let cellSize = gameRenderer.cellSize;
             let cell = gameRenderer.cellTable[row][col];
             ctx.fillStyle = color;
-            ctx.fillRect(cell.x, cell.y, cellSize, cellSize);
+            ctx.fillRect(cell.x + 1, cell.y + 1, cellSize - 2, cellSize - 2);
         }
 
         function drawScore(gameRenderer, color, font) {
