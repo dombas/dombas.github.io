@@ -10,9 +10,13 @@ const BOARD_SIZE_GET_NAME = 'board';
 const SPEED_GET_NAME = 'speed';
 
 let gameSettings = new GameSettings();
+let frameTime = Math.floor(1000 / gameSettings.gameSpeed);
+console.log("frame time " + frameTime);
+let gameStorage = new GameStorage();
 let gameLogic = new GameLogic();
 let gameRender = new GameRenderer();
 let touchHandler = new TouchHandler();
+
 document.addEventListener('keydown', gameLogic);
 document.addEventListener('touchmove', touchHandler);
 document.addEventListener('touchstart', function (event) {
@@ -25,8 +29,7 @@ function gameUpdate() {
 }
 
 gameUpdate();
-let frameTime = Math.floor(1000/gameSettings.gameSpeed);
-console.log("frame time " + frameTime);
+
 window.setInterval(gameUpdate, frameTime);
 
 function GameSettings() {
@@ -55,6 +58,7 @@ function GameSettings() {
         this.gameSpeed = gameSpeed;
     }
 
+
     function getIntGetParameterFromUrlParams(parameterName, urlParams) {
         if (urlParams.has(parameterName)) {
             let parameterValue = parseInt(urlParams.get(parameterName));
@@ -70,7 +74,7 @@ function TouchHandler() {
     this.lastTouchX = 0;
     this.lastTouchY = 0;
 
-    let movingAverageWindow = 3;
+    let movingAverageWindow = 5;
     this.diffsX = Array(movingAverageWindow).fill(0);
     this.diffsY = Array(movingAverageWindow).fill(0);
 
@@ -129,6 +133,8 @@ function GameLogic() {
     this.meatActor = new MeatActor(1, 1);
     this.boardSizeInCells = gameSettings.boardSize;
     this.keyBuffer = null;
+    this.highScore = gameStorage.loadHighScore();
+    this.isHighScoreStreak = false;
 
     this.score = 0;
 
@@ -140,7 +146,7 @@ function GameLogic() {
         this.handleControl(event.key);
     };
 
-    this.handleControl = function (eventKey){
+    this.handleControl = function (eventKey) {
         switch (eventKey) {
             case "ArrowDown":
                 if (this.snakeActor.goDown()) {
@@ -174,7 +180,7 @@ function GameLogic() {
     };
 
     this.update = function () {
-        if(this.keyBuffer){
+        if (this.keyBuffer) {
             this.handleControl(this.keyBuffer);
         }
         this.snakeActor.move();
@@ -209,8 +215,16 @@ function GameLogic() {
         }
     };
 
-    this.updateScore = function(){
+    this.updateScore = function () {
         this.score = this.snakeActor.snakeLength - gameSettings.minSnakeLength;
+        if (this.score > this.highScore) {
+            console.log("new highscore!");
+            this.highScore = this.score;
+            gameStorage.storeHighScore(this.score);
+            this.isHighScoreStreak = true;
+        } else {
+            this.isHighScoreStreak = false;
+        }
     };
 
     function isSamePosition(actor1, actor2) {
@@ -225,6 +239,7 @@ function GameLogic() {
         let y = Math.floor(Math.random() * stopY);
         return {'x': x, 'y': y};
     }
+
 }
 
 function GameRenderer() {
@@ -236,15 +251,25 @@ function GameRenderer() {
     this.canvasWidth = this.canvasElement.getAttribute('width');
     this.canvasHeight = this.canvasElement.getAttribute('height');
 
-    this.gameLogic = gameLogic;
-
     this.borderThickness = 5;
     this.borderColor = '#060';
 
     this.backgroundColor = '#000';
 
     this.scoreColor = 'rgba(255,255,255,0.5)';
-    this.scoreFont = this.canvasWidth/4+'px Sans-Serif';
+    this.scoreFont = Math.floor(this.canvasWidth / 4) + 'px Sans-Serif';
+
+    this.highScoreColor = 'rgba(255,252,24,0.72)';
+    this.highScoreFont = Math.floor(this.canvasWidth / 3) + 'px Sans-Serif';
+
+    this.textOpacity = 1.0;
+    this.textColor = 'rgba(255,255,255,' + this.textOpacity + ')';
+    // this.textSize = Math.floor(this.canvasWidth / 16);
+    this.textSize = parseInt(getComputedStyle(document.documentElement).fontSize);
+    // this.textFont = this.textSize + 'px Sans-Serif';
+    this.textFont = '2rem Sans-Serif';
+    this.gameSettingsTextDisplayTime = 5000;
+    this.gameSettingsTextTimeLeft = this.gameSettingsTextDisplayTime;
 
     this.meatColor = '#900';
 
@@ -256,18 +281,27 @@ function GameRenderer() {
 
     this.drawFrame = function () {
 
+        this.countDownTimers(frameTime);
+        this.updateTextOpacity();
+
         clearFrame(this);
 
-        drawBackground(this,this.backgroundColor);
+        drawBackground(this, this.backgroundColor);
 
         drawGameBorder(this);
 
         drawSnake(this, gameLogic.snakeActor);
 
-        let meat = this.gameLogic.meatActor;
+        let meat = gameLogic.meatActor;
         drawMeat(this, meat.y, meat.x);
 
-        drawScore(this, this.scoreColor, this.scoreFont);
+        if (gameLogic.isHighScoreStreak) {
+            drawScore(this, this.highScoreColor, this.highScoreFont);
+        } else {
+            drawScore(this, this.scoreColor, this.scoreFont);
+        }
+
+        drawGameSettingsText(this, this.textColor, this.textFont);
 
         function clearFrame(gameRenderer) {
             let ctx = gameRenderer.renderContext;
@@ -276,12 +310,12 @@ function GameRenderer() {
             ctx.clearRect(0, 0, width, height);
         }
 
-        function drawBackground(gameRenderer, color){
+        function drawBackground(gameRenderer, color) {
             let ctx = gameRenderer.renderContext;
             ctx.fillStyle = color;
             let width = gameRenderer.canvasWidth;
             let height = gameRenderer.canvasHeight;
-            ctx.fillRect(0,0,width, height);
+            ctx.fillRect(0, 0, width, height);
         }
 
         function drawGameBorder(gameRenderer) {
@@ -323,16 +357,44 @@ function GameRenderer() {
             ctx.fillRect(cell.x, cell.y, cellSize, cellSize);
         }
 
-        function drawScore(gameRenderer, color, font){
+        function drawScore(gameRenderer, color, font) {
             let ctx = gameRenderer.renderContext;
             ctx.fillStyle = color;
             ctx.font = font;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            let x = gameRenderer.canvasWidth/2;
-            let y = gameRenderer.canvasHeight/2;
-            ctx.fillText(gameLogic.score, x, y, gameRenderer.canvasWidth/2);
+            let x = Math.floor(gameRenderer.canvasWidth / 2);
+            let y = Math.floor(gameRenderer.canvasHeight / 2);
+            ctx.fillText(gameLogic.score, x, y, gameRenderer.canvasWidth / 2);
         }
+
+        function drawGameSettingsText(gameRenderer, color, font) {
+            let ctx = gameRenderer.renderContext;
+            ctx.fillStyle = color;
+            ctx.font = font;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let x = Math.floor(gameRenderer.canvasWidth / 2);
+            let y = Math.floor(2 * gameRenderer.textSize);
+            printText("Speed " + gameSettings.gameSpeed, 0);
+            printText("Board size " + gameSettings.boardSize, 1);
+            printText("High score " + gameLogic.highScore, 2);
+
+            function printText(text, row = 0) {
+                ctx.fillText(text, x, y + 2 * row * gameRenderer.textSize, Math.floor(gameRenderer.canvasWidth));
+            }
+        }
+    };
+
+    this.countDownTimers = function (amount) {
+        this.gameSettingsTextTimeLeft -= amount;
+        if (this.gameSettingsTextTimeLeft < 0)
+            this.gameSettingsTextTimeLeft = 0;
+    };
+
+    this.updateTextOpacity = function () {
+        this.textOpacity = this.gameSettingsTextTimeLeft / this.gameSettingsTextDisplayTime;
+        this.textColor = 'rgba(255,255,255,' + this.textOpacity + ')';
     };
 
     /**
@@ -372,6 +434,65 @@ function GameRenderer() {
         };
     }
 
+}
+
+function GameStorage() {
+    this.storeHighScore = function (highScore) {
+        if (typeof (Storage) !== "undefined") {
+            // Code for localStorage/sessionStorage.
+            let speed = gameSettings.gameSpeed;
+            let boardSize = gameSettings.boardSize;
+            let feedGrow = gameSettings.feedGrow;
+            let minSnakeLength = gameSettings.minSnakeLength;
+            let gameSettingsString = this.gameSettingsToString(speed, boardSize, feedGrow, minSnakeLength);
+            localStorage.setItem(gameSettingsString, highScore.toString());
+        } else {
+            // Sorry! No Web Storage support..
+        }
+    };
+
+    this.loadHighScore = function () {
+        if (typeof (Storage) !== "undefined") {
+            // Code for localStorage/sessionStorage.
+            let speed = gameSettings.gameSpeed;
+            let boardSize = gameSettings.boardSize;
+            let feedGrow = gameSettings.feedGrow;
+            let minSnakeLength = gameSettings.minSnakeLength;
+            let gameSettingsString = this.gameSettingsToString(speed, boardSize, feedGrow, minSnakeLength);
+            let highscore = localStorage.getItem(gameSettingsString);
+            if (highscore) {
+                return highscore;
+            } else {
+                return 0;
+            }
+        } else {
+            // Sorry! No Web Storage support..
+            return 0;
+        }
+    };
+
+    this.gameSettingsToString = function (speed, boardSize, feedGrow, minSnakeLength) {
+        return "S" + speed + "B" + boardSize + "F" + feedGrow + "M" + minSnakeLength;
+    };
+
+    this.stringToGameSettings = function (gameSettingsString) {
+        let speedStartIndex = 1;
+        let boardSizeStartIndex = gameSettingsString.search('B');
+        let feedGrowStartIndex = gameSettingsString.search('F');
+        let minSnakeLengthStartIndex = gameSettingsString.search('M');
+
+        let speed = parseInt(gameSettingsString.substring(speedStartIndex, boardSizeStartIndex));
+        let boardSize = parseInt(gameSettingsString.substring(boardSizeStartIndex, feedGrowStartIndex));
+        let feedGrow = parseInt(gameSettingsString.substring(feedGrowStartIndex, minSnakeLengthStartIndex));
+        let minSnakeLength = parseInt(gameSettingsString.substring(minSnakeLengthStartIndex));
+
+        return {
+            'speed': speed,
+            'boardSize': boardSize,
+            'feedGrow': feedGrow,
+            'minSnakeLength': minSnakeLength
+        }
+    };
 }
 
 function GenericActor(startingX, startingY) {
