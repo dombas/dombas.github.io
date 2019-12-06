@@ -134,7 +134,7 @@ function TouchHandler() {
 
 function GameLogic() {
     this.snakeActor = new SnakeActor(3, 3);
-    this.meatActor = new MeatActor(1, 1);
+    this.meatActor = new MeatActor(1, 3);
     this.boardSizeInCells = gameSettings.boardSize;
     this.keyBuffer = null;
     this.highScore = gameStorage.loadHighScore();
@@ -232,7 +232,15 @@ function GameLogic() {
     };
 
     function isSamePosition(actor1, actor2) {
-        return actor1.x === actor2.x && actor1.y === actor2.y;
+        let wrappedActor1 = {
+            'x': actor1.x % gameLogic.boardSizeInCells,
+            'y': actor1.y % gameLogic.boardSizeInCells
+        };
+        let wrappedActor2 = {
+            'x': actor2.x % gameLogic.boardSizeInCells,
+            'y': actor2.y % gameLogic.boardSizeInCells
+        };
+        return wrappedActor1.x === wrappedActor2.x && wrappedActor1.y === wrappedActor2.y;
     }
 
     function getRandomPosition(stopX, stopY) {
@@ -283,7 +291,7 @@ function GameRenderer() {
     let cellTableObject = makeCellTable(this, gameSettings.boardSize);
     this.cellSize = cellTableObject.cellSize;
     this.cellTable = cellTableObject.cellTable;
-    this.snakeThickness = Math.floor(this.cellSize*0.75);
+    this.snakeThickness = Math.floor(this.cellSize * 0.75);
 
     this.drawFrame = function () {
 
@@ -348,16 +356,16 @@ function GameRenderer() {
                 let changeX = segment.x - previousSegment.x;
                 let changeY = segment.y - previousSegment.y;
                 if (changeX === 1) {
-                    drawSnakeSegmentThinLeft(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinLeft(gameRenderer, segment.y, segment.x, thickness);
                     drawSnakeSegmentThinRight(gameRenderer, previousSegment.y, previousSegment.x, thickness);
                 } else if (changeX === -1) {
-                    drawSnakeSegmentThinRight(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinRight(gameRenderer, segment.y, segment.x, thickness);
                     drawSnakeSegmentThinLeft(gameRenderer, previousSegment.y, previousSegment.x, thickness);
                 } else if (changeY === 1) {
-                    drawSnakeSegmentThinUp(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinUp(gameRenderer, segment.y, segment.x, thickness);
                     drawSnakeSegmentThinDown(gameRenderer, previousSegment.y, previousSegment.x, thickness);
                 } else if (changeY === -1) {
-                    drawSnakeSegmentThinDown(gameRenderer,segment.y, segment.x, thickness);
+                    drawSnakeSegmentThinDown(gameRenderer, segment.y, segment.x, thickness);
                     drawSnakeSegmentThinUp(gameRenderer, previousSegment.y, previousSegment.x, thickness);
                 }
                 previousSegment = segment;
@@ -609,7 +617,8 @@ function SnakeActor(startingX, startingY) {
     };
 
     this.goRight = function () {
-        if (this.getLastChangeX() !== -1) {
+        let lastChangeX = this.getLastChangeX();
+        if (lastChangeX !== -1 && lastChangeX !== gameLogic.boardSizeInCells - 1) {
             this.changeY = 0;
             this.changeX = 1;
             return true;
@@ -618,7 +627,8 @@ function SnakeActor(startingX, startingY) {
     };
 
     this.goLeft = function () {
-        if (this.getLastChangeX() !== 1) {
+        let lastChangeX = this.getLastChangeX();
+        if (lastChangeX !== 1 && lastChangeX !== (gameLogic.boardSizeInCells - 1) * -1) {
             this.changeY = 0;
             this.changeX = -1;
             return true;
@@ -627,7 +637,8 @@ function SnakeActor(startingX, startingY) {
     };
 
     this.goUp = function () {
-        if (this.getLastChangeY() !== 1) {
+        let lastChangeY = this.getLastChangeY();
+        if (lastChangeY !== 1 && lastChangeY !== (gameLogic.boardSizeInCells - 1) * -1) {
             this.changeX = 0;
             this.changeY = -1;
             return true;
@@ -636,7 +647,8 @@ function SnakeActor(startingX, startingY) {
     };
 
     this.goDown = function () {
-        if (this.getLastChangeY() !== -1) {
+        let lastChangeY = this.getLastChangeY();
+        if (lastChangeY !== -1 && lastChangeY !== gameLogic.boardSizeInCells - 1) {
             this.changeX = 0;
             this.changeY = 1;
             return true;
@@ -646,11 +658,15 @@ function SnakeActor(startingX, startingY) {
 
     this.getLastChangeX = function () {
         let firstSegment = this.segments[0];
-        return this.x - firstSegment.x;
+        let lastChangeX = this.x - firstSegment.x;
+        console.log("changeX " + lastChangeX);
+        return lastChangeX;
     };
 
     this.getLastChangeY = function () {
         let firstSegment = this.segments[0];
-        return this.y - firstSegment.y;
+        let lastChangeY = this.y - firstSegment.y;
+        console.log("changeY " + lastChangeY);
+        return lastChangeY;
     };
 }
