@@ -1,3 +1,7 @@
+/**
+ * @author Dominik Dąbek
+ */
+
 const CANVAS_ID = 'mainCanvas';
 const DEFAULT_MIN_SNAKE_LENGTH = 3;
 const DEFAULT_FEED_GROW = 1;
