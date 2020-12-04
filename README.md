@@ -2,6 +2,8 @@
 You can change game settings in URL
 /?msl=3&feed=1&board=20&speed=10
 
+You can play at https://dombas.github.io/
+
 msl - minimum snake length (snake starts with this length)
 
 feed - snake will grow by this amount after eating
