@@ -1,5 +1,8 @@
 /**
  * @author Dominik Dąbek
+ * indeks nr 29375
+ * grupa Lab/2020/2021/ISI- CB3 N
+ * Zachodniopomorska Szkoła Biznesu w Szczecinie
  */
 
 const CANVAS_ID = 'mainCanvas';
